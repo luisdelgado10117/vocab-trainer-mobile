@@ -18,6 +18,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Map<String, dynamic>> _dueCards = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
+  bool _isImporting = false;
   bool _showTranslation = false;
   String? _errorMessage;
 
@@ -34,9 +35,22 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final cards = await ApiService.getDueCards(widget.token);
+      final due = await ApiService.getDueCards(widget.token);
+
+      if (due.isEmpty) {
+        // No hay pendientes HOY... pero, ¿es porque ya estudió todo, o
+        // porque es una cuenta nueva que todavía no tiene nada? Solo en
+        // ese segundo caso importamos el paquete inicial automáticamente.
+        final allCards = await ApiService.getAllCards(widget.token);
+
+        if (allCards.isEmpty) {
+          await _autoImportSeedPack();
+          return; // _autoImportSeedPack ya vuelve a cargar las pendientes
+        }
+      }
+
       setState(() {
-        _dueCards = cards;
+        _dueCards = due;
         _showTranslation = false;
       });
     } catch (e) {
@@ -50,28 +64,29 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _importSeedPack() async {
+  /// Se llama SOLO la primera vez que un usuario nuevo entra, sin que
+  /// tenga que tocar ningún botón.
+  Future<void> _autoImportSeedPack() async {
     setState(() {
-      _isSubmitting = true;
-      _errorMessage = null;
+      _isImporting = true;
     });
 
     try {
-      final imported = await ApiService.importSeedPack(widget.token);
-      if (!mounted) return;
+      await ApiService.importSeedPack(widget.token);
+      final due = await ApiService.getDueCards(widget.token);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Se agregaron $imported palabras nuevas')),
-      );
-
-      await _loadDueCards();
+      setState(() {
+        _dueCards = due;
+        _showTranslation = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
       });
     } finally {
       setState(() {
-        _isSubmitting = false;
+        _isImporting = false;
+        _isLoading = false;
       });
     }
   }
@@ -126,11 +141,27 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(onRefresh: _loadDueCards, child: _buildBody()),
+      body: RefreshIndicator(
+        onRefresh: _loadDueCards,
+        child: _buildBody(),
+      ),
     );
   }
 
   Widget _buildBody() {
+    if (_isImporting) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Preparando tu vocabulario inicial...'),
+          ],
+        ),
+      );
+    }
+
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -148,8 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return _buildMessageState(
         icon: Icons.celebration,
         iconColor: Colors.amber,
-        message: '¡No tienes palabras pendientes por hoy!\n\nSi eres nuevo, importa el vocabulario inicial para empezar.',
-        showImportButton: true,
+        message: '¡No tienes palabras pendientes por hoy!\n\nVuelve mañana para seguir repasando.',
       );
     }
 
@@ -160,7 +190,6 @@ class _HomeScreenState extends State<HomeScreen> {
     required IconData icon,
     required Color iconColor,
     required String message,
-    bool showImportButton = false,
     bool showRetryButton = false,
   }) {
     return ListView(
@@ -180,14 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 24),
-              if (showImportButton)
-                ElevatedButton.icon(
-                  onPressed: _isSubmitting ? null : _importSeedPack,
-                  icon: const Icon(Icons.download),
-                  label: _isSubmitting
-                      ? const Text('Importando...')
-                      : const Text('Importar vocabulario inicial'),
-                ),
               if (showRetryButton)
                 ElevatedButton(
                   onPressed: _loadDueCards,
@@ -267,10 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: List.generate(6, (quality) {
             return ElevatedButton(
               onPressed: _isSubmitting ? null : () => _submitReview(quality),
-              child: Text(
-                '$quality\n${labels[quality]}',
-                textAlign: TextAlign.center,
-              ),
+              child: Text('$quality\n${labels[quality]}', textAlign: TextAlign.center),
             );
           }),
         ),

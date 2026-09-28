@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 /// Centraliza todas las llamadas a tu API de vocab-trainer.
 class ApiService {
   // IMPORTANTE: reemplaza esta IP por la de TU computadora.
-  static const String baseUrl = 'http://192.168.1.43:5000';
+  static const String baseUrl = 'http://192.168.1.60:5000';
 
   static Future<String> login(String username, String password) async {
     final response = await http.post(
@@ -49,6 +49,22 @@ class ApiService {
     }
 
     throw Exception('Error al obtener las tarjetas pendientes');
+  }
+
+  /// Devuelve TODAS tus tarjetas (pendientes o no). Se usa para distinguir
+  /// "ya no tienes nada pendiente hoy" de "eres nuevo y no tienes nada".
+  static Future<List<Map<String, dynamic>>> getAllCards(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/cards'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as List<dynamic>;
+      return data.cast<Map<String, dynamic>>();
+    }
+
+    throw Exception('Error al obtener tus tarjetas');
   }
 
   /// Devuelve las tarjetas agrupadas por verbo, para la pantalla de
