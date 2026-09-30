@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/api_service.dart';
+import 'stats_screen.dart';
 import 'vocabulary_screen.dart';
 
 /// Muestra las tarjetas pendientes de repaso, una por una. Si no hay
@@ -129,6 +130,17 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Repaso de hoy'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.local_fire_department),
+            tooltip: 'Mi progreso',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => StatsScreen(token: widget.token),
+                ),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.menu_book),
             tooltip: 'Ver mi vocabulario',
             onPressed: () {
@@ -141,10 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadDueCards,
-        child: _buildBody(),
-      ),
+      body: RefreshIndicator(onRefresh: _loadDueCards, child: _buildBody()),
     );
   }
 
@@ -288,7 +297,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: List.generate(6, (quality) {
             return ElevatedButton(
               onPressed: _isSubmitting ? null : () => _submitReview(quality),
-              child: Text('$quality\n${labels[quality]}', textAlign: TextAlign.center),
+              child: Text(
+                '$quality\n${labels[quality]}',
+                textAlign: TextAlign.center,
+              ),
             );
           }),
         ),

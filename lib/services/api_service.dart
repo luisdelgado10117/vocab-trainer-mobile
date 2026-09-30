@@ -83,6 +83,20 @@ class ApiService {
   }
 
   /// Envía una calificación (0-5) de qué tan bien recordaste una tarjeta.
+  /// Devuelve las estadísticas de progreso: racha, tarjetas dominadas, etc.
+  static Future<Map<String, dynamic>> getStats(String token) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/stats'),
+      headers: {'Authorization': 'Bearer $token'},
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    }
+
+    throw Exception('Error al obtener las estadísticas');
+  }
+
   static Future<void> submitReview(
     String token,
     int cardId,
