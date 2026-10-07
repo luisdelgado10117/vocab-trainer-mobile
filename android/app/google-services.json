@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "703405552282",
+    "project_id": "vocab-trainer-b2b8f",
+    "storage_bucket": "vocab-trainer-b2b8f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:703405552282:android:485dce9b201ccc5dab6523",
+        "android_client_info": {
+          "package_name": "com.example.vocab_trainer_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDApbZbai-kp1_8QhY2J1tSeEEhMuPtEYc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

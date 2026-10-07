@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../services/api_service.dart';
 import 'stats_screen.dart';
@@ -27,6 +28,49 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadDueCards();
+    _setupPushNotifications();
+  }
+
+  /// Pide permiso de notificaciones, obtiene el token de este dispositivo,
+  /// y se lo manda a tu backend para que pueda enviarte avisos despues.
+  Future<void> _setupPushNotifications() async {
+    final messaging = FirebaseMessaging.instance;
+
+    final settings = await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    final granted =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
+        settings.authorizationStatus == AuthorizationStatus.provisional;
+
+    if (!granted) {
+      return; // el usuario dijo que no; respetamos su decision
+    }
+
+    final fcmToken = await messaging.getToken();
+    if (fcmToken == null) return;
+
+    try {
+      await ApiService.registerDeviceToken(widget.token, fcmToken);
+    } catch (_) {
+      // Si falla el registro del token no interrumpimos el resto de la
+      // app - simplemente esta sesion no recibira notificaciones push.
+    }
+
+    // Si la app esta ABIERTA cuando llega una notificacion, Android no la
+    // muestra automaticamente en la barra de notificaciones (eso solo
+    // pasa cuando la app esta cerrada/en segundo plano). Por eso, aqui
+    // mostramos algo nosotros mismos: un SnackBar.
+    FirebaseMessaging.onMessage.listen((message) {
+      if (!mounted) return;
+      final title = message.notification?.title ?? 'Recordatorio';
+      final body = message.notification?.body ?? '';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text('$title: $body')));
+    });
   }
 
   Future<void> _loadDueCards() async {

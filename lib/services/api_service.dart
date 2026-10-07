@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 /// Centraliza todas las llamadas a tu API de vocab-trainer.
 class ApiService {
   // IMPORTANTE: reemplaza esta IP por la de TU computadora.
-  static const String baseUrl = 'http://192.168.1.60:5000';
+  static const String baseUrl = 'http://192.168.1.17:5000';
 
   static Future<String> login(String username, String password) async {
     final response = await http.post(
@@ -95,6 +95,25 @@ class ApiService {
     }
 
     throw Exception('Error al obtener las estadísticas');
+  }
+
+  /// Guarda el token de notificaciones push de este dispositivo en tu cuenta.
+  static Future<void> registerDeviceToken(
+    String authToken,
+    String fcmToken,
+  ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/device-token'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $authToken',
+      },
+      body: jsonEncode({'token': fcmToken}),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Error al registrar el token de notificaciones');
+    }
   }
 
   static Future<void> submitReview(
